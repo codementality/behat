@@ -1,0 +1,105 @@
+version: '3.4'
+services:
+  drupal.test:
+    hostname: drupal.test
+    build: docker/nginx
+    expose:
+      - 9000
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./:/var/www/:cached # User-guided caching
+    environment:
+      TZ: 'EST5EDT'
+
+  php:
+    #build: docker/php
+    image: prometsource/php7.2-fpm-acquia
+    volumes:
+      - ./:/var/www/:cached # User-guided caching
+    environment:
+      TZ: 'EST5EDT'
+      PHP_IDE_CONFIG: "serverName=docker"
+      # Switch remote_host to 127.0.0.1 for Linux.
+      # Switch remote_enable to 0 to disable xDebug within the container.
+      XDEBUG_CONFIG: "remote_enable=1 remote_host=10.254.254.254"
+    working_dir: /var/www
+
+  db:
+    image: mariadb
+    environment:
+      MYSQL_USER: drupal
+      MYSQL_PASSWORD: drupal
+      MYSQL_DATABASE: drupal
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 33306:3306
+    volumes:
+      - dbdata:/var/lib/mysql
+
+#  solr.drupal.test:
+#    hostname: solr.drupal.test
+#    image: solr:6.6
+#    ports:
+#     - 8983:8983
+#    volumes:
+#      - solr:/opt/solr/server/solr/d8
+#      - ./config/solr/6.x:/solr-conf/conf
+#    entrypoint:
+#      - docker-entrypoint.sh
+#      - solr-precreate
+#      - d8
+#      - /solr-conf
+#
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - 8025
+
+#  memcached:
+#    image: memcached:1.5
+#    ports:
+#      - 11211
+#
+#  fetools:
+#    build: docker/fetools
+#    environment:
+#      TZ: 'EST5EDT'
+#    depends_on:
+#      - gao.test
+#    volumes:
+#      #- ./:/data
+#      - node_modules:/data/themesrc/node_modules
+#      - ./themesrc/config:/data/themesrc/config
+#      - ./themesrc/gulpfile.js:/data/themesrc/gulpfile.js
+#      - ./themesrc/themes:/data/themesrc/themes
+#      - ./docroot:/data/docroot
+#
+  selenium:
+    ##image: selenium/standalone-chrome:2.53.0
+    image: selenium/standalone-firefox:2.50.0
+    ports:
+      - 4444:4444
+    volumes:
+      - /dev/shm:/dev/shm
+    environment:
+      TZ: 'EST5EDT'
+    depends_on:
+      - drupal.test
+
+#  pa11y:
+#    image: prometsource/docker-pa11y-ci:0.10
+#    volumes:
+#       - ./tests/pa11y/wcag2-config.json:/workspace/wcag2-config.json
+#
+volumes:
+## persistent data volume for mysql data
+  dbdata:
+    driver: local
+## persistent data volume for Solr
+#  solr:
+#    driver: local
+##$ persistent data volume for node_modules
+#  node_modules:
+#    driver: local
